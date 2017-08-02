@@ -1,0 +1,19 @@
+#!/bin/bash
+#
+# initial example of a pipeline script
+
+HOME="/data/home/molvera"
+TLA_DIR="$HOME/TLA_test"
+
+## Initial BWA mapping of reads
+bwa index $HOME/opt/fa/GRCh38_r77.all.fa
+bwa mem -t 4 $HOME/opt/fa/GRCh38_r77.all.fa $TLA_DIR/ERR476809_1.fastq.gz > $TLA_DIR/out.sam
+
+## 
+samtools view -f 4 $TLA_DIR/out.sam > $TLA_DIR/sample.unmapped.bam
+samtools view -F 4 $TLA_DIR/out.sam > $TLA_DIR/sample.mapped.bam
+
+
+java -jar $HOME/opt/picard.jar SamToFastq\
+ I=$TLA_DIR/sample.unmapped.bam\
+ FASTQ=$TLA_DIR/tla_R1_unmapped.fastq
