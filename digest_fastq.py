@@ -9,7 +9,7 @@ in-silico digest. This script takes in a .fastq file (exported from unmapped
 .sam reads) and outputs a .fastq file with reads digested by an input RE site.
 
 Example:
-	python3 digest_fastq.py tla_unmapped.fastq ATGC 4 tla_unmapped.digested
+	python3 digest_fastq.py tla_unmapped.fastq ATGC 4 tla_unmapped.digested -e -v
 
 Inputs:
 	input_fastq : A fastq file to be digested.
@@ -25,7 +25,6 @@ Inputs:
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from Bio.Alphabet import IUPAC
 import re
 import argparse
 
@@ -47,7 +46,7 @@ def fastq_const(seq, id, name, desc, phred):
 	dict.__setitem__(record._per_letter_annotations, "phred_quality", phred)
 	return record
 
-def cut_read(fastq_read, digest_seq, cut_index):
+def cut_read(fastq_read, digest_seq, cut_index, min_length):
 	"""
 	Cuts the fastq_reads at a specific site.
 	"""
@@ -63,18 +62,18 @@ def cut_read(fastq_read, digest_seq, cut_index):
 		# List new FASTQ fragments
 		fragments = [fastq_const(digest_products[frag_i], fastq_read.id +'_%i'%(frag_i), 
 			fastq_read.name +'_%i'%(frag_i), fastq_read.description, 
-			split_phred[frag_i]) for frag_i in range(len(digest_products))]
+			split_phred[frag_i]) for frag_i in range(len(digest_products)) if len(digest_products[frag_i]) >= min_length]
 
 		return fragments
 
-def digest_fastq(fastq, digest_seq, cut_index, exclude_non_digested):
+def digest_fastq(fastq, digest_seq, cut_index, exclude_non_digested, min_length):
 	"""
 	Parse through the FASTQ file, and digest reads. 
 	"""
 	fq_list = list(SeqIO.parse(fastq, "fastq"))
 	digested_list = list()
 	for read in fq_list:
-		cut_fragments = cut_read(read, digest_seq, cut_index)
+		cut_fragments = cut_read(read, digest_seq, cut_index, min_length)
 		if exclude_non_digested and len(cut_fragments) != 1:
 			digested_list += cut_fragments 
 
@@ -84,11 +83,13 @@ def digest_fastq(fastq, digest_seq, cut_index, exclude_non_digested):
 
 
 if __name__ == '__main__':
-	parser = argparse.ArgumentParser(description='Digest a fsatq file with a specific enzyme.')
+	parser = argparse.ArgumentParser(description='Digest a fastq file with a specific enzyme.')
 	parser.add_argument('input_fastq', type=str, help='Fastq file of expected library reads.')
 	parser.add_argument('digest_seq', type=str, help='Sequence of the digest site')
-	parser.add_argument('cut_index', type=int, help='Where in the sequence to cut. For example, 0 = cut right before the sequence, 1 = cut between the firs tand second nucleotide of the recognition sequence.')
+	parser.add_argument('cut_index', type=int, help='Where in the sequence to cut. For example, \
+		0 = cut right before the sequence, 1 = cut between the firs tand second nucleotide of the recognition sequence.')
 	parser.add_argument('out', type=str, help='Name of output fastq, minus \'.fastq\'.')
+	parser.add_argument('--min_length', type=int, help='Minimum length of returned FASTQ reads', default=70)
 
 	parser.add_argument('-e','--exclude_non_digested', help="Exclude reads that don't digest", action="store_true")
 	parser.add_argument('-v', '--verbose', help="Increase output verbosity", action="store_true")
@@ -96,5 +97,5 @@ if __name__ == '__main__':
 
 	if args.verbose:
 		highlight_cut(args.digest_seq, args.cut_index)
-	SeqIO.write( digest_fastq(args.input_fastq, args.digest_seq, args.cut_index, args.exclude_non_digested), args.out+".fastq", "fastq")
+	SeqIO.write( digest_fastq(args.input_fastq, args.digest_seq, args.cut_index, args.exclude_non_digested, args.min_length), args.out+".fastq", "fastq")
 

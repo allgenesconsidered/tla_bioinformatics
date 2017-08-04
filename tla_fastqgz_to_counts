@@ -7,13 +7,27 @@ TLA_DIR="$HOME/TLA_test"
 
 ## Initial BWA mapping of reads
 bwa index $HOME/opt/fa/GRCh38_r77.all.fa
-bwa mem -t 4 $HOME/opt/fa/GRCh38_r77.all.fa $TLA_DIR/ERR476809_1.fastq.gz > $TLA_DIR/out.sam
+bwa mem -t 4 $HOME/opt/fa/GRCh38_r77.all.fa $TLA_DIR/ERR476809_1.fastq.gz > $TLA_DIR/tla_R1.sam
 
-## 
-samtools view -f 4 $TLA_DIR/out.sam > $TLA_DIR/sample.unmapped.bam
-samtools view -F 4 $TLA_DIR/out.sam > $TLA_DIR/sample.mapped.bam
+## Seperate out mapped vs unmapped reads from SAM. 
+samtools view -f 4 -h $TLA_DIR/tla_R1.sam > $TLA_DIR/tla_R1_unmapped.sam
+samtools view -F 4 -h $TLA_DIR/tla_R1.sam > $TLA_DIR/tla_R1_mapped.sam
 
-
+## Convert .sam files to .fastq
 java -jar $HOME/opt/picard.jar SamToFastq\
- I=$TLA_DIR/sample.unmapped.bam\
+ I=$TLA_DIR/sample_unmapped.sam\
  FASTQ=$TLA_DIR/tla_R1_unmapped.fastq
+
+## In silico digest
+python3 $TLA_DIR/digest_fastq.py $TLA_DIR/tla_R1_unmapped.fastq CATG 4 $TLA_DIR/tla_R1_digested -e
+
+## Remapping post-digest
+bwa index $HOME/opt/fa/GRCh38_r77.all.fa
+bwa mem -t 4 $HOME/opt/fa/GRCh38_r77.all.fa $TLA_DIR/tla_R1_digested.fastq > $TLA_DIR/tla_R1_digested.sam
+
+## Sort and add header
+samtools view -b -S -o tla_R1_mapped.bam tla_R1._mapped.sam
+samtools sort tla_R1_mapped.bam tla_R1_mapped_sorted.bam
+
+samtools view -b -S -o tla_R1_digested.bam tla_R1_digested.sam
+samtools sort tla_R1_digested.bam tla_R1_digested_sorted.bam
