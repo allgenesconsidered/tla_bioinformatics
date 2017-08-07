@@ -36,7 +36,7 @@ def highlight_cut(digest_seq, cut_index):
 	"""
 	if cut_index >= len(digest_seq):
 		digest_seq = digest_seq + 'N'*(cut_index - len(digest_seq) + 1)
-	print('Cutting here:', digest_seq[:cut_index],'*',digest_seq[cut_index:])
+	print 'Cutting here:', digest_seq[:cut_index],'*',digest_seq[cut_index:]
 
 def fastq_const(seq, id, name, desc, phred):
 	"""
@@ -78,7 +78,7 @@ def digest_fastq(fastq, digest_seq, cut_index, exclude_non_digested, min_length)
 			digested_list += cut_fragments 
 
 	if args.verbose:
-		print("%i total reads processed, %i reads returned." %(len(fq_list) ,len(digested_list)))
+		print "%i total reads processed, %i reads returned." %(len(fq_list) ,len(digested_list))
 	return digested_list
 
 

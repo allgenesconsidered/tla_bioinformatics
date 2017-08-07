@@ -4,30 +4,52 @@
 
 HOME="/data/home/molvera"
 TLA_DIR="$HOME/TLA_test"
+F_FILE="ERR476809_2"
+F_EXT=".fastq.gz"
+
+mkdir -p $TLA_DIR/$F_FILE
 
 ## Initial BWA mapping of reads
+echo "[INITAL BWA FASTQ MAPPING]"
 bwa index $HOME/opt/fa/GRCh38_r77.all.fa
-bwa mem -t 4 $HOME/opt/fa/GRCh38_r77.all.fa $TLA_DIR/ERR476809_1.fastq.gz > $TLA_DIR/tla_R1.sam
+bwa mem -t 4 $HOME/opt/fa/GRCh38_r77.all.fa $TLA_DIR/$F_FILE$F_EXT > $TLA_DIR/$F_FILE/$F_FILE.sam
 
 ## Seperate out mapped vs unmapped reads from SAM. 
-samtools view -f 4 -h $TLA_DIR/tla_R1.sam > $TLA_DIR/tla_R1_unmapped.sam
-samtools view -F 4 -h $TLA_DIR/tla_R1.sam > $TLA_DIR/tla_R1_mapped.sam
+echo "[SPLITTING MAPPED/UNMAPPED]"
+samtools view -f 4 -h $TLA_DIR/$F_FILE/$F_FILE.sam > $TLA_DIR/$F_FILE/$F_FILE_unmapped.sam
+samtools view -F 4 -h $TLA_DIR/$F_FILE/$F_FILE.sam > $TLA_DIR/$F_FILE/$F_FILE_mapped.sam
 
 ## Convert .sam files to .fastq
+echo "[CONVERTING TO FASTQ]"
 java -jar $HOME/opt/picard.jar SamToFastq\
- I=$TLA_DIR/sample_unmapped.sam\
- FASTQ=$TLA_DIR/tla_R1_unmapped.fastq
+ I=$TLA_DIR/$F_FILE/$F_FILE_unmapped.sam\
+ FASTQ=$TLA_DIR/$F_FILE/$F_FILE_unmapped.fastq
 
 ## In silico digest
-python3 $TLA_DIR/digest_fastq.py $TLA_DIR/tla_R1_unmapped.fastq CATG 4 $TLA_DIR/tla_R1_digested -e
+echo "[IN SILICO DIGEST]"
+python $TLA_DIR/digest_fastq.py $TLA_DIR/$F_FILE/$F_FILE_unmapped.fastq CATG 4 $TLA_DIR/$F_FILE/$F_FILE_digested -e
 
 ## Remapping post-digest
+echo "[REMAPPING DIGESTED FASTQ]"
 bwa index $HOME/opt/fa/GRCh38_r77.all.fa
-bwa mem -t 4 $HOME/opt/fa/GRCh38_r77.all.fa $TLA_DIR/tla_R1_digested.fastq > $TLA_DIR/tla_R1_digested.sam
+bwa mem -t 4 $HOME/opt/fa/GRCh38_r77.all.fa $TLA_DIR/$F_FILE/$F_FILE_digested.fastq > $TLA_DIR/$F_FILE/$F_FILE_digested.sam
 
-## Sort and add header
-samtools view -b -S -o tla_R1_mapped.bam tla_R1._mapped.sam
-samtools sort tla_R1_mapped.bam tla_R1_mapped_sorted.bam
+# ## Sort and add header
+# echo "[SORTING SAM FILES (MAPPED)]"
+# java -jar $HOME/opt/picard.jar MergeSamFiles\
+#  I=$TLA_DIR/$F_FILE/$F_FILE_mapped.sam\
+#  SORT_ORDER=coordinate\
+#  O=$TLA_DIR/$F_FILE/$F_FILE_mapped_s.bam
 
-samtools view -b -S -o tla_R1_digested.bam tla_R1_digested.sam
-samtools sort tla_R1_digested.bam tla_R1_digested_sorted.bam
+# echo "[SORTING SAM FILES (UNMAPPED)]"
+# java -jar $HOME/opt/picard.jar MergeSamFiles\
+#  I=$TLA_DIR/$F_FILE/$F_FILE_digested.sam\
+#  SORT_ORDER=coordinate\
+#  O=$TLA_DIR/$F_FILE/$F_FILE_digested_s.bam
+
+echo "[JOINING AND SORTING SAM FILES]"
+java -jar $HOME/opt/picard.jar MergeSamFiles\
+ I=$TLA_DIR/$F_FILE/$F_FILE_mapped.sam\
+ I=$TLA_DIR/$F_FILE/$F_FILE_digested.sam\
+ SORT_ORDER=coordinate\
+ O=$TLA_DIR/$F_FILE/$F_FILE_sorted.bam
