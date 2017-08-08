@@ -9,7 +9,7 @@ in-silico digest. This script takes in a .fastq file (exported from unmapped
 .sam reads) and outputs a .fastq file with reads digested by an input RE site.
 
 Example:
-	python3 digest_fastq.py tla_unmapped.fastq ATGC 4 tla_unmapped.digested -e -v
+	python digest_fastq.py tla_unmapped.fastq ATGC 4 tla_unmapped.digested -e -v
 
 Inputs:
 	input_fastq : A fastq file to be digested.

@@ -12,44 +12,52 @@ mkdir -p $TLA_DIR/$F_FILE
 ## Initial BWA mapping of reads
 echo "[INITAL BWA FASTQ MAPPING]"
 bwa index $HOME/opt/fa/GRCh38_r77.all.fa
-bwa mem -t 4 $HOME/opt/fa/GRCh38_r77.all.fa $TLA_DIR/$F_FILE$F_EXT > $TLA_DIR/$F_FILE/$F_FILE.sam
+bwa mem -t 4 $HOME/opt/fa/GRCh38_r77.all.fa $TLA_DIR/$F_FILE$F_EXT > $TLA_DIR/$F_FILE/$F_FILE\.sam
 
 ## Seperate out mapped vs unmapped reads from SAM. 
 echo "[SPLITTING MAPPED/UNMAPPED]"
-samtools view -f 4 -h $TLA_DIR/$F_FILE/$F_FILE.sam > $TLA_DIR/$F_FILE/$F_FILE_unmapped.sam
-samtools view -F 4 -h $TLA_DIR/$F_FILE/$F_FILE.sam > $TLA_DIR/$F_FILE/$F_FILE_mapped.sam
+samtools view -f 4 -h $TLA_DIR/$F_FILE/$F_FILE\.sam > $TLA_DIR/$F_FILE/$F_FILE\_unmapped.sam
+samtools view -F 4 -h $TLA_DIR/$F_FILE/$F_FILE\.sam > $TLA_DIR/$F_FILE/$F_FILE\_mapped.sam
 
 ## Convert .sam files to .fastq
 echo "[CONVERTING TO FASTQ]"
 java -jar $HOME/opt/picard.jar SamToFastq\
- I=$TLA_DIR/$F_FILE/$F_FILE_unmapped.sam\
- FASTQ=$TLA_DIR/$F_FILE/$F_FILE_unmapped.fastq
+ I=$TLA_DIR/$F_FILE/$F_FILE\_unmapped.sam\
+ FASTQ=$TLA_DIR/$F_FILE/$F_FILE\_unmapped.fastq
 
 ## In silico digest
 echo "[IN SILICO DIGEST]"
-python $TLA_DIR/digest_fastq.py $TLA_DIR/$F_FILE/$F_FILE_unmapped.fastq CATG 4 $TLA_DIR/$F_FILE/$F_FILE_digested -e
+python $TLA_DIR/digest_fastq.py $TLA_DIR/$F_FILE/$F_FILE\_unmapped.fastq CATG 4 $TLA_DIR/$F_FILE/$F_FILE\_digested -e
 
 ## Remapping post-digest
 echo "[REMAPPING DIGESTED FASTQ]"
 bwa index $HOME/opt/fa/GRCh38_r77.all.fa
-bwa mem -t 4 $HOME/opt/fa/GRCh38_r77.all.fa $TLA_DIR/$F_FILE/$F_FILE_digested.fastq > $TLA_DIR/$F_FILE/$F_FILE_digested.sam
+bwa mem -t 4 $HOME/opt/fa/GRCh38_r77.all.fa $TLA_DIR/$F_FILE/$F_FILE\_digested.fastq > $TLA_DIR/$F_FILE/$F_FILE\_digested.sam
 
 # ## Sort and add header
 # echo "[SORTING SAM FILES (MAPPED)]"
 # java -jar $HOME/opt/picard.jar MergeSamFiles\
-#  I=$TLA_DIR/$F_FILE/$F_FILE_mapped.sam\
+#  I=$TLA_DIR/$F_FILE/$F_FILE\_mapped.sam\
 #  SORT_ORDER=coordinate\
-#  O=$TLA_DIR/$F_FILE/$F_FILE_mapped_s.bam
+#  O=$TLA_DIR/$F_FILE/$F_FILE\_mapped_s.bam
 
 # echo "[SORTING SAM FILES (UNMAPPED)]"
 # java -jar $HOME/opt/picard.jar MergeSamFiles\
-#  I=$TLA_DIR/$F_FILE/$F_FILE_digested.sam\
+#  I=$TLA_DIR/$F_FILE/$F_FILE\_digested.sam\
 #  SORT_ORDER=coordinate\
-#  O=$TLA_DIR/$F_FILE/$F_FILE_digested_s.bam
+#  O=$TLA_DIR/$F_FILE/$F_FILE\_digested_s.bam
 
 echo "[JOINING AND SORTING SAM FILES]"
 java -jar $HOME/opt/picard.jar MergeSamFiles\
- I=$TLA_DIR/$F_FILE/$F_FILE_mapped.sam\
- I=$TLA_DIR/$F_FILE/$F_FILE_digested.sam\
+ I=$TLA_DIR/$F_FILE/$F_FILE\_mapped.sam\
+ I=$TLA_DIR/$F_FILE/$F_FILE\_digested.sam\
  SORT_ORDER=coordinate\
- O=$TLA_DIR/$F_FILE/$F_FILE_sorted.bam
+ O=$TLA_DIR/$F_FILE/$F_FILE\_sorted.bam
+
+java -jar $HOME/opt/picard.jar BuildBamIndex\
+ I=$TLA_DIR/$F_FILE/$F_FILE\_sorted.bam\
+ O=$TLA_DIR/$F_FILE/$F_FILE\_sorted.bam.bai
+
+
+
+
